@@ -79,6 +79,11 @@ public class Room {
         return desc;
     }
     
+    //returns true if there are no items in the room
+    public boolean isEmpty() {
+        return this.getLootSize() == 0;
+    }
+    
     //sets the x coord for the room
     public void setXcoord(int xcoord) {
         this.xcoord = xcoord;

@@ -3,6 +3,9 @@
 //imports
 import java.util.Scanner;
 import java.util.ArrayList;
+import java.io.File;
+import java.io.RandomAccessFile;
+import java.io.IOException;
 
 //Main class
 public class Main {
@@ -14,6 +17,7 @@ public class Main {
     static int STATE = MENU;
     static Room[][] rooms = new Room[4][5];
     static Player player = new Player();
+    static Item[] items = Init.initItems();
     //This is no longer needed in the Java version and was causing problems
     //static ArrayList<Item> inventory = player.getInventory();
     static ArrayList<Integer> flags = Init.initFlags();
@@ -24,6 +28,11 @@ public class Main {
         flags[3] = status of door from 14 to 04 (0 for locked, 1 for unlocked)
         flags[4] = status of wall from 32 to 31 (0 for sealed, 1 for open)
         flags[5] = status of drain in 12 (0 for key in drain, 1 for no key in drain)
+        flags[6] = status of desc for Water Chamber (0 for default, 1 for item picked up)
+        flags[7] = status of desc for Wash Room (0 for default, 1 for item picked up)
+        flags[8] = status of desc for Unfinished Excavation (0 for default, 1 for item picked up)
+        flags[9] = status of desc for Tomb Entrance (0 for default, 1 for item picked up)
+        flags[10] = status of desc for Scullery (0 for default, 1 for item picked up)
     */
     
     //methods
@@ -90,7 +99,7 @@ public class Main {
         Helper.tab(4);
         System.out.println("An adventure-puzzle game by Graham Bartley.");
         Helper.newLine(1);
-        Helper.sleep(4);        
+        Helper.sleep(5);        
     }
     
     //prints the main menu
@@ -109,9 +118,11 @@ public class Main {
         Helper.tab(2);
         System.out.println("|-|   <1>  New Game    |-|");
         Helper.tab(2);
-        System.out.println("|-|   <2>  Help        |-|");
+        System.out.println("|-|   <2>  Load Game   |-|");
         Helper.tab(2);
-        System.out.println("|-|   <3>  Exit        |-|");
+        System.out.println("|-|   <3>  Help        |-|");
+        Helper.tab(2);
+        System.out.println("|-|   <4>  Exit        |-|");
         Helper.tab(2);
         System.out.println("|-|                    |-|");
         Helper.tab(2);
@@ -126,8 +137,163 @@ public class Main {
         int choice = scan.nextInt();
         
         if (choice == 1) {
+            //New Game
+            //initialize player and rooms to defaults
+            Init.initPlayer(player);
+            Init.initMap(rooms);
             STATE = PLAY;
         } else if (choice == 2) {
+            //Load Game
+            Helper.newLine(1);
+            Helper.tab(1);
+            System.out.println("Loading...");
+            Helper.sleep(3);
+            Helper.newLine(1);
+            //initialize player and rooms to defaults
+            player.reset();
+            Init.initMap(rooms);
+            try {
+                //RandomAccessFile is used to read and write to a binary file and can be opened as such
+                RandomAccessFile myFile = new RandomAccessFile("./cesaves/save0.dat", "r");           
+                /*
+                This array will hold the int values read in from the save file:
+                    [0] : xcoord
+                    [1] : ycoord
+                    [2] : inventory size
+                    [3] : name length
+                    [4] : flags[0]
+                    [5] : flags[1]
+                    [6] : flags[2]
+                    [7] : flags[3]
+                    [8] : flags[4]
+                    [9] : flags[5]
+                    [10]: flags[6]
+                    [11]: flags[7]
+                    [12]: flags[8]
+                    [13]: flags[9]
+                    [14]: flags[10]
+                */
+                //An array to store read in ints
+                int[] intValues = new int[15];
+                int i = 0;
+                //read in ints from save file
+                while (myFile.getFilePointer() < intValues.length * 4) {
+                    intValues[i] = myFile.readInt();
+                    i++;
+                }
+                
+                //Store these ints in appropriate variables
+                int xcoord, ycoord, inventorySize, nameLength;
+                xcoord = intValues[0];
+                ycoord = intValues[1];
+                inventorySize = intValues[2];
+                nameLength = intValues[3];
+                int[] flagsArray = {intValues[4], intValues[5], intValues[6], intValues[7], intValues[8],
+                                    intValues[9], intValues[10], intValues[11], intValues[12], intValues[13], intValues[14]};                
+                
+                //Store current filePointer
+                long filePointerVar = myFile.getFilePointer();
+                
+                //This array will hold the characters of the player name
+                char[] nameChars = new char[nameLength];                
+                i = 0;
+                //read in chars of player name from save file
+                while (myFile.getFilePointer() < filePointerVar + (nameLength * 2)) {
+                    nameChars[i] = myFile.readChar();
+                    i++;
+                }
+                String playerName = new String(nameChars);
+                
+                //Store current filePointer
+                filePointerVar = myFile.getFilePointer();                
+                
+                //int array for storing itemIDs read in from save file
+                int[] itemIDs = new int[intValues[2]];
+                i = 0;
+                //read in itemIDs
+                while (myFile.getFilePointer() < filePointerVar + intValues[2] * 4) {
+                    itemIDs[i] = myFile.readInt();
+                    i++;
+                }
+                
+                //Finished reading from the save file.
+                myFile.close();
+                
+                //Set data in game to data retrieved from save file.
+                //Set flags
+                for (int j = 0; j < flagsArray.length; j++) {
+                    flags.set(j, flagsArray[j]);
+                }
+                
+                //Set the player position
+                player.setPos(xcoord, ycoord);
+                
+                //Set the player name
+                player.setName(playerName);
+                
+                //Set the player inventory
+                for (int j = 0; j < inventorySize; j++) {
+                    player.addItem(getItemFromItemID(itemIDs[j]));
+                }
+                
+                //Update room descriptions (if necessary)
+                if (flags.get(0) == 1) {
+                    //Set the desc for the Tomb of a Queen
+                    rooms[1][0].setDesc("This burial chamber is highly decorative, but lacking in treasures...\n\tThere are markings in the dust of where items of value once were.\n\tA stone coffin with signs of attempted burglary lays sealed in the centre of the tomb.\n\tA rusted iron door stands open in the western wall.");
+                }
+                if (flags.get(1) == 1) {
+                    //Set the desc for the Dining Room
+                    rooms[2][3].setDesc("A large dining table spans the centre of the room with benches either side of it.\n\tAn old family crest can be seen on the table.\n\tThere's an open door to the north leading to the Kitchen.");    
+                }
+                if (flags.get(2) == 1) {
+                    //Set the desc for the Kitchen
+                    rooms[2][4].setDesc("An old kitchen with antique counter-tops and pots and pans lining the walls.\n\tThe western wall of the room has been knocked down and rubble clutters the floor...");                    
+                }                
+                if (flags.get(3) == 1) {
+                    //Set the desc for the Old Kitchen
+                    rooms[1][4].setDesc("This kitchen was decommissioned long before the other.\n\tIt was sealed off by the wall that stood to the east, which is now a pile of rubble.\n\tThere is hardly anything left of what this kitchen once was.\n\tThere are broken jars in the doorway to the west.");                    
+                }
+                if (flags.get(4) == 1) {
+                    //Set the desc for the Throne Room
+                    rooms[3][2].setDesc("The walls are decorated with torn banners showing an old family crest.\n\tThe room is aglow with intense, never-fading torchlight.\n\tThere is a passage in the southern wall which was previously blocked by a throne.");                    
+                }
+                if (flags.get(5) == 1) {
+                    //Set the desc for the Thief's Den and Wash Room
+                    rooms[1][2].setDesc("This den appears to have been home to a burglar.\n\tThere are rags hanging from corner-to-corner of the roof and a tent against the south wall.\n\tThe rest of the room is packed with useless junk.\n\tThere is an old water drain in the ground against the east wall.");
+                    rooms[2][2].setDesc("There is an antique bathtub against the wall and small steps leading to a broken sink.\n\tAn old pipe is exposed which was once underground and none of the plumbing works.\n\tA golden glow can be seen coming from the exposed pipe...\n\tA passage to the south leads to the Old Sewers.");                                            
+                }
+                if (flags.get(6) == 1) {
+                    //Set the desc for the Water Chamber
+                    rooms[0][0].setDesc("A small, square room with a pedastal in the centre.\n\tA basin of water sits upon it.");
+                }
+                if (flags.get(7) == 1) {
+                    //Set the desc for the Wash Room
+                    rooms[2][2].setDesc("There is an antique bathtub against the wall and small steps leading to a broken sink.\n\tAn old pipe is exposed which was once underground and none of the plumbing works.\n\tA passage to the south leads to the Old Sewers.");
+                }
+                if (flags.get(8) == 1) {
+                    //Set the desc for the Unfinished Excavation
+                    rooms[3][4].setDesc("This excavation was abandoned mid-creation and it's creator lies against the wall to the west.\n\tThe ceiling is supported by rotting wooden shafts and looks as though it could collapse at any moment.\n\tWhat did he discover that led him to such a fate?");
+                }
+                if (flags.get(9) == 1) {
+                    //Set the desc for the Tomb Entrance
+                    rooms[1][1].setDesc("Two large, ornate doors stand wide-open to the south... the air grows colder as you approach them.\n\tIn the north-eastern corner of the room there are some skeletons.");
+                }
+                if (flags.get(10) == 1) {
+                    //Set the desc for the Scullery
+                    rooms[0][3].setDesc("Broken plates and goblets lay piled up on the counters and in cabinets on the walls.\n\tThere is a rather large dried-blood stain on the ground next to the eastern wall.\n\tThis appears to be a dead end.");
+                }
+            }
+            catch (IOException e) {
+                Helper.tab(1);
+                System.out.println("Oh no! Something went wrong...");
+                Helper.newLine(1);
+                Helper.sleep(3);
+                e.printStackTrace();
+            }
+            //once everything is loaded, play the game...
+            STATE = PLAY;
+        } else if (choice == 3) {
+            //Help
             Helper.newLine(1);
             Helper.tab(1);
             System.out.println("Castle Escape is a text-based adventure-puzzle game.");
@@ -158,22 +324,21 @@ public class Main {
             System.out.println("Other than that, it's up to you! Good luck escaping the castle!");
             Helper.sleep(3);
             mainMenu();
-        } else if (choice == 3) {
+        } else if (choice == 4) {
+            //Exit Application
             STATE = STOP;
         } else {
+            //Invalid Input
             Helper.newLine(1);
             Helper.tab(1);
             System.out.println("Invalid input.");
             Helper.sleep(1);
-            mainMenu();
+            mainMenu();            
         }
     }
 
     //plays the game
     public static void playGame() {
-        //initialize objects
-        Init.initPlayer(player);
-        Init.initMap(rooms);
         int choice = -1;
         
         while (STATE == PLAY) {
@@ -203,6 +368,16 @@ public class Main {
                 accessInventory();
             //Return to Main Menu function
             } else if (choice == 8) {
+                if (saveGame()) {
+                    Helper.tab(1);
+                    System.out.println("Save successful!");
+                } else {
+                    Helper.tab(1);
+                    System.out.println("Save unsuccessful! Please try again later.");
+                }
+                Helper.sleep(3);
+                Helper.newLine(1);
+            } else if (choice == 9) {
                 STATE = MENU;
             }
             
@@ -263,7 +438,9 @@ public class Main {
         Helper.tab(2);
         System.out.println("<7>\t Open inventory.");
         Helper.tab(2);
-        System.out.println("<8>\t Return to the Main Menu. (Progress will be lost!)");
+        System.out.println("<8>\t Save game.");
+        Helper.tab(2);
+        System.out.println("<9>\t Return to the Main Menu. (Unsaved progress will be lost!)");
         
         Helper.newLine(1);
         Helper.tab(1);
@@ -274,6 +451,22 @@ public class Main {
         Helper.newLine(1);
         Helper.sleep(1);
         return choice;
+    }
+    
+    //gets itemID of a given Item object
+    public static int getItemIDFromItem(Item item) {
+        for (int i = 0; i < items.length; i++) {
+            if (items[i].equals(item)) {
+                return i;
+            }
+        }
+        //If looking for an item that doesn't exist...
+        return -1;
+    }
+    
+    //gets an Item from a given itemID
+    public static Item getItemFromItemID(int itemID) {
+        return items[itemID];
     }
     
     //use item function
@@ -363,22 +556,27 @@ public class Main {
                     ArrayList<Item> loot = currentRoom.getLoot();
                     //If the Steel key is being picked up, the desc for the Water Chamber must change
                     if (loot.get(itemChoice - 1).getName() == "Steel key" && rooms[0][0].getDesc() != "A small, square room with a pedastal in the centre.\n\tA basin of water sits upon it.") {
+                        flags.set(6, 1);
                         rooms[0][0].setDesc("A small, square room with a pedastal in the centre.\n\tA basin of water sits upon it.");
                     }
                     //If the Golden key is being picked up, the desc for the Wash Room must change
                     if (loot.get(itemChoice - 1).getName() == "Golden key" && rooms[2][2].getDesc() != "There is an antique bathtub against the wall and small steps leading to a broken sink.\n\tAn old pipe is exposed which was once underground and none of the plumbing works.\n\tA passage to the south leads to the Old Sewers.") {
+                        flags.set(7, 1);
                         rooms[2][2].setDesc("There is an antique bathtub against the wall and small steps leading to a broken sink.\n\tAn old pipe is exposed which was once underground and none of the plumbing works.\n\tA passage to the south leads to the Old Sewers.");
                     }
                     //If the Pickaxe is being picked up, the desc for the Unfinished Excavation must change
                     if (loot.get(itemChoice - 1).getName() == "Pickaxe" && rooms[3][4].getDesc() != "This excavation was abandoned mid-creation and it's creator lies against the wall to the west.\n\tThe ceiling is supported by rotting wooden shafts and looks as though it could collapse at any moment.\n\tWhat did he discover that led him to such a fate?") {
+                        flags.set(8, 1);
                         rooms[3][4].setDesc("This excavation was abandoned mid-creation and it's creator lies against the wall to the west.\n\tThe ceiling is supported by rotting wooden shafts and looks as though it could collapse at any moment.\n\tWhat did he discover that led him to such a fate?");
                     }
                     //If the Bucket is being picked up, the desc for the Tomb Entrance must change
                     if (loot.get(itemChoice - 1).getName() == "Bucket" && rooms[1][1].getDesc() != "Two large, ornate doors stand wide-open to the south... the air grows colder as you approach them.\n\tIn the north-eastern corner of the room there are some skeletons.") {
+                        flags.set(9, 1);
                         rooms[1][1].setDesc("Two large, ornate doors stand wide-open to the south... the air grows colder as you approach them.\n\tIn the north-eastern corner of the room there are some skeletons.");
                     }
                     //If the Unlit torch is being picked up, the desc for the Scullery must change
                     if (loot.get(itemChoice - 1).getName() == "Unlit torch" && rooms[0][3].getDesc() != "Broken plates and goblets lay piled up on the counters and in cabinets on the walls.\n\tThere is a rather large dried-blood stain on the ground next to the eastern wall.\n\tThis appears to be a dead end.") {
+                        flags.set(10, 1);
                         rooms[0][3].setDesc("Broken plates and goblets lay piled up on the counters and in cabinets on the walls.\n\tThere is a rather large dried-blood stain on the ground next to the eastern wall.\n\tThis appears to be a dead end.");
                     }
                     if (loot.get(itemChoice - 1).getName() == "Treasures") {
@@ -410,10 +608,13 @@ public class Main {
     //inventory function (list, get item descriptions, drop items)
     public static void accessInventory() {
         Scanner scan = new Scanner(System.in);
-        int functionChoice = 1;
-        while (functionChoice > 0) {
+        //int functionChoice = 1;
+        //while (functionChoice > 0) {
             //if inventory is not empty, it can be listed
             if (player.getInventorySize() > 0) {
+                /*
+                I removed the drop item functionality for now as it's not included in save files
+                
                 player.listInventory();
                 Helper.newLine(1);
                 Helper.tab(1);
@@ -425,13 +626,14 @@ public class Main {
                 Helper.sleep(1);                    
                 //enter item description mode
                 if (functionChoice == 1) {
+                */
                     int itemChoice = 1;
                     //while items are being chosen for description
                     while (itemChoice > 0) {
                         player.listInventory();
                         Helper.newLine(1);
                         Helper.tab(1);
-                        System.out.println("Enter an item number for a description of that item or enter 0 to exit to inventory.");
+                        System.out.println("Enter an item number for a description of that item or enter 0 to exit the inventory.");
                         Helper.tab(1);
                         System.out.print("> ");
                         itemChoice = scan.nextInt();
@@ -443,7 +645,8 @@ public class Main {
                             Helper.sleep(2);
                         }
                     }
-                }                    
+                    /*
+                }
                 //enter item removal mode
                 if (functionChoice == 2) {
                     int itemChoice = 1;
@@ -472,6 +675,7 @@ public class Main {
                                 player.removeItem(player.getItemFromInventory(itemChoice - 1));
                                 Helper.sleep(2);
                             }
+                            
                         } else {
                             Helper.tab(2);
                             System.out.println("< Inventory >");
@@ -483,6 +687,7 @@ public class Main {
                         }
                     }
                 }
+                */
             //otherwise inventory is empty, so print this and return
             } else {
                 Helper.tab(2);
@@ -490,9 +695,49 @@ public class Main {
                 Helper.tab(2);
                 System.out.println("Your inventory is empty.");
                 Helper.newLine(1);
-                functionChoice = 0;
+                //functionChoice = 0;
             }
+        //}
+    }
+
+    //function used to save the game progress to a file
+    public static boolean saveGame() {
+        File saveDir = new File("./cesaves");
+        //if the save directory doesn't exist, create it
+        if (!saveDir.exists()) {
+            saveDir.mkdir();
         }
+        //Then deal with the file itself
+        File saveFile = new File("./cesaves/save0.dat");
+        try {
+            saveFile.createNewFile();
+            RandomAccessFile saveFileO = new RandomAccessFile(saveFile, "rw");
+            
+            //write int data to save file
+            saveFileO.writeInt(player.getXcoord());
+            saveFileO.writeInt(player.getYcoord());
+            saveFileO.writeInt(player.getInventorySize());
+            saveFileO.writeInt(player.getName().length());
+            for (int i = 0; i < flags.size(); i++) {
+                saveFileO.writeInt(flags.get(i));
+            }
+            
+            //write player name to save file as a String
+            saveFileO.writeChars(player.getName());
+            
+            //write inventory to save file as int itemIDs
+            for (int i = 0; i < player.getInventorySize(); i++) {
+                saveFileO.writeInt(getItemIDFromItem(player.getItemFromInventory(i)));
+            }
+            
+            //finished writing to the save file
+            saveFileO.close();
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        //If return true wasn't reached, saving failed
+        return false;
     }
     
     //move north function

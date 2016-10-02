@@ -54,12 +54,25 @@ public class Init {
         Helper.sleep(1);
     }
     
+    public static Item[] initItems() {
+        Item[] items = new Item[8];
+        items[0] = new Item("Rusted key", "\tA small iron key, coated in dark brown rust.\n");
+        items[1] = new Item("Steel key", "\tA shiny key with intricate designs on it's sides. it is made from firm steel.\n");
+        items[2] = new Item("Golden key", "An expertly-made golden key with gems down it's side.");
+        items[3] = new Item("Pickaxe", "\tThis pickaxe appears to have been well used, perhaps it's previous owner started something they couldn't finish?\n");
+        items[4] = new Item("Bucket", "\tUsed for carrying liquids and such.\n");
+        items[5] = new Item("Bucket of water", "\tA wooden bucket full of clear water.\n");
+        items[6] = new Item("Unlit torch", "\tA worn-looking wooden torch, although it's not lit now there are signs that it once was.\n");
+        items[7] = new Item("Treasures", "\tPriceless gems and metals!\n");
+        return items;
+    }
+    
     //NOTE: This method did not exist in the C++ version because vectors can be initialized in one line
     //initializes the flags ArrayList representing the state of doors etc.
     public static ArrayList<Integer> initFlags() {
         ArrayList<Integer> flags = new ArrayList<Integer>();
-        //there are 6 flags that need to all start at 0
-        for (int i = 0; i < 6; i++) {
+        //there are 11 flags that need to all start at 0
+        for (int i = 0; i < 11; i++) {
             flags.add(0);
         }
         return flags;

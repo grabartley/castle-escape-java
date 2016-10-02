@@ -12,7 +12,7 @@ public class Item {
     //constructors
     //no args constructor
     public Item() {
-        this.name = "item";
+        this.name = "Item";
         this.desc = "\tThis is an item with no description.\n";
     }
     
