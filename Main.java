@@ -146,152 +146,160 @@ public class Main {
             //Load Game
             Helper.newLine(1);
             Helper.tab(1);
-            System.out.println("Loading...");
-            Helper.sleep(3);
-            Helper.newLine(1);
-            //initialize player and rooms to defaults
-            player.reset();
-            Init.initMap(rooms);
-            try {
-                //RandomAccessFile is used to read and write to a binary file and can be opened as such
-                RandomAccessFile myFile = new RandomAccessFile("./cesaves/save0.dat", "r");           
-                /*
-                This array will hold the int values read in from the save file:
-                    [0] : xcoord
-                    [1] : ycoord
-                    [2] : inventory size
-                    [3] : name length
-                    [4] : flags[0]
-                    [5] : flags[1]
-                    [6] : flags[2]
-                    [7] : flags[3]
-                    [8] : flags[4]
-                    [9] : flags[5]
-                    [10]: flags[6]
-                    [11]: flags[7]
-                    [12]: flags[8]
-                    [13]: flags[9]
-                    [14]: flags[10]
-                */
-                //An array to store read in ints
-                int[] intValues = new int[15];
-                int i = 0;
-                //read in ints from save file
-                while (myFile.getFilePointer() < intValues.length * 4) {
-                    intValues[i] = myFile.readInt();
-                    i++;
-                }
-                
-                //Store these ints in appropriate variables
-                int xcoord, ycoord, inventorySize, nameLength;
-                xcoord = intValues[0];
-                ycoord = intValues[1];
-                inventorySize = intValues[2];
-                nameLength = intValues[3];
-                int[] flagsArray = {intValues[4], intValues[5], intValues[6], intValues[7], intValues[8],
-                                    intValues[9], intValues[10], intValues[11], intValues[12], intValues[13], intValues[14]};                
-                
-                //Store current filePointer
-                long filePointerVar = myFile.getFilePointer();
-                
-                //This array will hold the characters of the player name
-                char[] nameChars = new char[nameLength];                
-                i = 0;
-                //read in chars of player name from save file
-                while (myFile.getFilePointer() < filePointerVar + (nameLength * 2)) {
-                    nameChars[i] = myFile.readChar();
-                    i++;
-                }
-                String playerName = new String(nameChars);
-                
-                //Store current filePointer
-                filePointerVar = myFile.getFilePointer();                
-                
-                //int array for storing itemIDs read in from save file
-                int[] itemIDs = new int[intValues[2]];
-                i = 0;
-                //read in itemIDs
-                while (myFile.getFilePointer() < filePointerVar + intValues[2] * 4) {
-                    itemIDs[i] = myFile.readInt();
-                    i++;
-                }
-                
-                //Finished reading from the save file.
-                myFile.close();
-                
-                //Set data in game to data retrieved from save file.
-                //Set flags
-                for (int j = 0; j < flagsArray.length; j++) {
-                    flags.set(j, flagsArray[j]);
-                }
-                
-                //Set the player position
-                player.setPos(xcoord, ycoord);
-                
-                //Set the player name
-                player.setName(playerName);
-                
-                //Set the player inventory
-                for (int j = 0; j < inventorySize; j++) {
-                    player.addItem(getItemFromItemID(itemIDs[j]));
-                }
-                
-                //Update room descriptions (if necessary)
-                if (flags.get(0) == 1) {
-                    //Set the desc for the Tomb of a Queen
-                    rooms[1][0].setDesc("This burial chamber is highly decorative, but lacking in treasures...\n\tThere are markings in the dust of where items of value once were.\n\tA stone coffin with signs of attempted burglary lays sealed in the centre of the tomb.\n\tA rusted iron door stands open in the western wall.");
-                }
-                if (flags.get(1) == 1) {
-                    //Set the desc for the Dining Room
-                    rooms[2][3].setDesc("A large dining table spans the centre of the room with benches either side of it.\n\tAn old family crest can be seen on the table.\n\tThere's an open door to the north leading to the Kitchen.");    
-                }
-                if (flags.get(2) == 1) {
-                    //Set the desc for the Kitchen
-                    rooms[2][4].setDesc("An old kitchen with antique counter-tops and pots and pans lining the walls.\n\tThe western wall of the room has been knocked down and rubble clutters the floor...");                    
-                }                
-                if (flags.get(3) == 1) {
-                    //Set the desc for the Old Kitchen
-                    rooms[1][4].setDesc("This kitchen was decommissioned long before the other.\n\tIt was sealed off by the wall that stood to the east, which is now a pile of rubble.\n\tThere is hardly anything left of what this kitchen once was.\n\tThere are broken jars in the doorway to the west.");                    
-                }
-                if (flags.get(4) == 1) {
-                    //Set the desc for the Throne Room
-                    rooms[3][2].setDesc("The walls are decorated with torn banners showing an old family crest.\n\tThe room is aglow with intense, never-fading torchlight.\n\tThere is a passage in the southern wall which was previously blocked by a throne.");                    
-                }
-                if (flags.get(5) == 1) {
-                    //Set the desc for the Thief's Den and Wash Room
-                    rooms[1][2].setDesc("This den appears to have been home to a burglar.\n\tThere are rags hanging from corner-to-corner of the roof and a tent against the south wall.\n\tThe rest of the room is packed with useless junk.\n\tThere is an old water drain in the ground against the east wall.");
-                    rooms[2][2].setDesc("There is an antique bathtub against the wall and small steps leading to a broken sink.\n\tAn old pipe is exposed which was once underground and none of the plumbing works.\n\tA golden glow can be seen coming from the exposed pipe...\n\tA passage to the south leads to the Old Sewers.");                                            
-                }
-                if (flags.get(6) == 1) {
-                    //Set the desc for the Water Chamber
-                    rooms[0][0].setDesc("A small, square room with a pedastal in the centre.\n\tA basin of water sits upon it.");
-                }
-                if (flags.get(7) == 1) {
-                    //Set the desc for the Wash Room
-                    rooms[2][2].setDesc("There is an antique bathtub against the wall and small steps leading to a broken sink.\n\tAn old pipe is exposed which was once underground and none of the plumbing works.\n\tA passage to the south leads to the Old Sewers.");
-                }
-                if (flags.get(8) == 1) {
-                    //Set the desc for the Unfinished Excavation
-                    rooms[3][4].setDesc("This excavation was abandoned mid-creation and it's creator lies against the wall to the west.\n\tThe ceiling is supported by rotting wooden shafts and looks as though it could collapse at any moment.\n\tWhat did he discover that led him to such a fate?");
-                }
-                if (flags.get(9) == 1) {
-                    //Set the desc for the Tomb Entrance
-                    rooms[1][1].setDesc("Two large, ornate doors stand wide-open to the south... the air grows colder as you approach them.\n\tIn the north-eastern corner of the room there are some skeletons.");
-                }
-                if (flags.get(10) == 1) {
-                    //Set the desc for the Scullery
-                    rooms[0][3].setDesc("Broken plates and goblets lay piled up on the counters and in cabinets on the walls.\n\tThere is a rather large dried-blood stain on the ground next to the eastern wall.\n\tThis appears to be a dead end.");
-                }
-            }
-            catch (IOException e) {
-                Helper.tab(1);
-                System.out.println("Oh no! Something went wrong...");
-                Helper.newLine(1);
+            //If a save file exists, load it...
+            if ((new File("./cesaves/save0.dat")).exists()) {
+                System.out.println("Loading...");
                 Helper.sleep(3);
-                e.printStackTrace();
+                Helper.newLine(1);
+                //initialize player and rooms to defaults
+                player.reset();
+                Init.initMap(rooms);
+                try {
+                    //RandomAccessFile is used to read and write to a binary file and can be opened as such
+                    RandomAccessFile myFile = new RandomAccessFile("./cesaves/save0.dat", "r");           
+                    /*
+                    This array will hold the int values read in from the save file:
+                        [0] : xcoord
+                        [1] : ycoord
+                        [2] : inventory size
+                        [3] : name length
+                        [4] : flags[0]
+                        [5] : flags[1]
+                        [6] : flags[2]
+                        [7] : flags[3]
+                        [8] : flags[4]
+                        [9] : flags[5]
+                        [10]: flags[6]
+                        [11]: flags[7]
+                        [12]: flags[8]
+                        [13]: flags[9]
+                        [14]: flags[10]
+                    */
+                    //An array to store read in ints
+                    int[] intValues = new int[15];
+                    int i = 0;
+                    //read in ints from save file
+                    while (myFile.getFilePointer() < intValues.length * 4) {
+                        intValues[i] = myFile.readInt();
+                        i++;
+                    }
+                    
+                    //Store these ints in appropriate variables
+                    int xcoord, ycoord, inventorySize, nameLength;
+                    xcoord = intValues[0];
+                    ycoord = intValues[1];
+                    inventorySize = intValues[2];
+                    nameLength = intValues[3];
+                    int[] flagsArray = {intValues[4], intValues[5], intValues[6], intValues[7], intValues[8],
+                                        intValues[9], intValues[10], intValues[11], intValues[12], intValues[13], intValues[14]};                
+                    
+                    //Store current filePointer
+                    long filePointerVar = myFile.getFilePointer();
+                    
+                    //This array will hold the characters of the player name
+                    char[] nameChars = new char[nameLength];                
+                    i = 0;
+                    //read in chars of player name from save file
+                    while (myFile.getFilePointer() < filePointerVar + (nameLength * 2)) {
+                        nameChars[i] = myFile.readChar();
+                        i++;
+                    }
+                    String playerName = new String(nameChars);
+                    
+                    //Store current filePointer
+                    filePointerVar = myFile.getFilePointer();                
+                    
+                    //int array for storing itemIDs read in from save file
+                    int[] itemIDs = new int[intValues[2]];
+                    i = 0;
+                    //read in itemIDs
+                    while (myFile.getFilePointer() < filePointerVar + intValues[2] * 4) {
+                        itemIDs[i] = myFile.readInt();
+                        i++;
+                    }
+                    
+                    //Finished reading from the save file.
+                    myFile.close();
+                    
+                    //Set data in game to data retrieved from save file.
+                    //Set flags
+                    for (int j = 0; j < flagsArray.length; j++) {
+                        flags.set(j, flagsArray[j]);
+                    }
+                    
+                    //Set the player position
+                    player.setPos(xcoord, ycoord);
+                    
+                    //Set the player name
+                    player.setName(playerName);
+                    
+                    //Set the player inventory
+                    for (int j = 0; j < inventorySize; j++) {
+                        player.addItem(getItemFromItemID(itemIDs[j]));
+                    }
+                    
+                    //Update room descriptions (if necessary)
+                    if (flags.get(0) == 1) {
+                        //Set the desc for the Tomb of a Queen
+                        rooms[1][0].setDesc("This burial chamber is highly decorative, but lacking in treasures...\n\tThere are markings in the dust of where items of value once were.\n\tA stone coffin with signs of attempted burglary lays sealed in the centre of the tomb.\n\tA rusted iron door stands open in the western wall.");
+                    }
+                    if (flags.get(1) == 1) {
+                        //Set the desc for the Dining Room
+                        rooms[2][3].setDesc("A large dining table spans the centre of the room with benches either side of it.\n\tAn old family crest can be seen on the table.\n\tThere's an open door to the north leading to the Kitchen.");    
+                    }
+                    if (flags.get(2) == 1) {
+                        //Set the desc for the Kitchen
+                        rooms[2][4].setDesc("An old kitchen with antique counter-tops and pots and pans lining the walls.\n\tThe western wall of the room has been knocked down and rubble clutters the floor...");                    
+                    }                
+                    if (flags.get(3) == 1) {
+                        //Set the desc for the Old Kitchen
+                        rooms[1][4].setDesc("This kitchen was decommissioned long before the other.\n\tIt was sealed off by the wall that stood to the east, which is now a pile of rubble.\n\tThere is hardly anything left of what this kitchen once was.\n\tThere are broken jars in the doorway to the west.");                    
+                    }
+                    if (flags.get(4) == 1) {
+                        //Set the desc for the Throne Room
+                        rooms[3][2].setDesc("The walls are decorated with torn banners showing an old family crest.\n\tThe room is aglow with intense, never-fading torchlight.\n\tThere is a passage in the southern wall which was previously blocked by a throne.");                    
+                    }
+                    if (flags.get(5) == 1) {
+                        //Set the desc for the Thief's Den and Wash Room
+                        rooms[1][2].setDesc("This den appears to have been home to a burglar.\n\tThere are rags hanging from corner-to-corner of the roof and a tent against the south wall.\n\tThe rest of the room is packed with useless junk.\n\tThere is an old water drain in the ground against the east wall.");
+                        rooms[2][2].setDesc("There is an antique bathtub against the wall and small steps leading to a broken sink.\n\tAn old pipe is exposed which was once underground and none of the plumbing works.\n\tA golden glow can be seen coming from the exposed pipe...\n\tA passage to the south leads to the Old Sewers.");                                            
+                    }
+                    if (flags.get(6) == 1) {
+                        //Set the desc for the Water Chamber
+                        rooms[0][0].setDesc("A small, square room with a pedastal in the centre.\n\tA basin of water sits upon it.");
+                    }
+                    if (flags.get(7) == 1) {
+                        //Set the desc for the Wash Room
+                        rooms[2][2].setDesc("There is an antique bathtub against the wall and small steps leading to a broken sink.\n\tAn old pipe is exposed which was once underground and none of the plumbing works.\n\tA passage to the south leads to the Old Sewers.");
+                    }
+                    if (flags.get(8) == 1) {
+                        //Set the desc for the Unfinished Excavation
+                        rooms[3][4].setDesc("This excavation was abandoned mid-creation and it's creator lies against the wall to the west.\n\tThe ceiling is supported by rotting wooden shafts and looks as though it could collapse at any moment.\n\tWhat did he discover that led him to such a fate?");
+                    }
+                    if (flags.get(9) == 1) {
+                        //Set the desc for the Tomb Entrance
+                        rooms[1][1].setDesc("Two large, ornate doors stand wide-open to the south... the air grows colder as you approach them.\n\tIn the north-eastern corner of the room there are some skeletons.");
+                    }
+                    if (flags.get(10) == 1) {
+                        //Set the desc for the Scullery
+                        rooms[0][3].setDesc("Broken plates and goblets lay piled up on the counters and in cabinets on the walls.\n\tThere is a rather large dried-blood stain on the ground next to the eastern wall.\n\tThis appears to be a dead end.");
+                    }
+                }
+                catch (IOException e) {
+                    Helper.tab(1);
+                    System.out.println("Oh no! Something went wrong...");
+                    Helper.newLine(1);
+                    Helper.sleep(3);
+                    e.printStackTrace();
+                }
+                //once everything is loaded, play the game...
+                STATE = PLAY;
+            } else {
+                //If no save file is found...
+                System.out.println("No save file found!");
+                Helper.sleep(3);
+                Helper.newLine(1);
             }
-            //once everything is loaded, play the game...
-            STATE = PLAY;
         } else if (choice == 3) {
             //Help
             Helper.newLine(1);
